@@ -39,3 +39,7 @@ temp/
 
 # Cache
 .cache/
+
+# arquivos md
+*.md
+!README.md   

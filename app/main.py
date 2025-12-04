@@ -6,10 +6,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
+from pathlib import Path
 
 from app.db import engine, Base
 from app.api import auth, cars, clients
 from app.api import docs as docs_api
+
+# Obter diretório base do projeto
+BASE_DIR = Path(__file__).parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
 
 # Criar tabelas
 Base.metadata.create_all(bind=engine)
@@ -37,28 +42,28 @@ app.include_router(clients.router)
 app.include_router(docs_api.router)
 
 # Servir arquivos estáticos
-app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")
 
 # Rotas para as páginas
 @app.get("/")
 async def root():
-    return FileResponse("frontend/templates/login.html")
+    return FileResponse(str(FRONTEND_DIR / "templates" / "login_simple.html"))
 
 @app.get("/login")
 async def login_page():
-    return FileResponse("frontend/templates/login.html")
+    return FileResponse(str(FRONTEND_DIR / "templates" / "login_simple.html"))
 
 @app.get("/dashboard")
 async def dashboard_page():
-    return FileResponse("frontend/templates/dashboard.html")
+    return FileResponse(str(FRONTEND_DIR / "templates" / "dashboard.html"))
 
 @app.get("/car/{car_id}")
 async def car_page(car_id: int):
-    return FileResponse("frontend/templates/car.html")
+    return FileResponse(str(FRONTEND_DIR / "templates" / "car.html"))
 
 @app.get("/client/{client_id}")
 async def client_page(client_id: int):
-    return FileResponse("frontend/templates/client.html")
+    return FileResponse(str(FRONTEND_DIR / "templates" / "client.html"))
 
 # Health check
 @app.get("/health")
