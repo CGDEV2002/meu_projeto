@@ -2,9 +2,10 @@
 API de Documentos
 """
 from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.db import get_db
 from app.models.document import Document
@@ -33,6 +34,8 @@ class DocumentUpdate(BaseModel):
     is_completed: Optional[bool] = None
 
 class DocumentResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     name: str
     document_type: str
@@ -41,10 +44,6 @@ class DocumentResponse(BaseModel):
     is_required: bool
     is_completed: bool
     car_id: int
-    created_at: str
-    
-    class Config:
-        from_attributes = True
 
 # Rotas
 @router.get("/", response_model=List[DocumentResponse])

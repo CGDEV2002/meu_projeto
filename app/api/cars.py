@@ -2,9 +2,10 @@
 API de Carros
 """
 from typing import List, Optional
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.db import get_db
 from app.models.car import Car
@@ -35,6 +36,8 @@ class CarUpdate(BaseModel):
     status: Optional[str] = None
 
 class CarResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     title: str
     brand: str
@@ -45,10 +48,6 @@ class CarResponse(BaseModel):
     observations: Optional[str]
     status: str
     tenant_id: int
-    created_at: str
-    
-    class Config:
-        from_attributes = True
 
 # Rotas
 @router.get("/", response_model=List[CarResponse])
