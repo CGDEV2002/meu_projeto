@@ -1,0 +1,17 @@
+[phases.setup]
+nixPkgs = ['python39']
+
+[phases.install]
+cmds = [
+  'pip install -r requirements.txt'
+]
+
+[phases.build]
+cmds = [
+  'mkdir -p uploads/photos',
+  'mkdir -p uploads/documents', 
+  'python init_db.py'
+]
+
+[start]
+cmd = 'uvicorn app.main:app --host 0.0.0.0 --port $PORT'
