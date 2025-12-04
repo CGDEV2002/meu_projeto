@@ -1,11 +1,21 @@
 #!/bin/bash
 
-# Script de build para Render
-echo "Installing dependencies..."
+# Script de build para o Render
+echo "🚀 Iniciando build do VendaVoa..."
+
+# Instalar dependências
+echo "📦 Instalando dependências..."
 pip install -r requirements.txt
 
-echo "Setting up database..."
-cd app
-python -c "from db import engine, Base; from models import *; Base.metadata.create_all(bind=engine)"
+# Criar diretórios necessários
+echo "📁 Criando diretórios..."
+mkdir -p uploads/photos
+mkdir -p uploads/documents
+
+# Inicializar banco de dados
+echo "🗄️ Inicializando banco de dados..."
+python init_db.py
+
+echo "✅ Build concluído com sucesso!"
 
 echo "Build completed successfully!"

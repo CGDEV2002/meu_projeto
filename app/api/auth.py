@@ -15,11 +15,12 @@ from pydantic import BaseModel, ConfigDict
 from app.db import get_db
 from app.models.user import User
 from app.models.tenant import Tenant
+from app.config import settings
 
 # Configurações
-SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key")
-ALGORITHM = os.getenv("ALGORITHM", "HS256")
-ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # Funções de hash de senha simples e seguras
 def get_password_hash(password: str) -> str:

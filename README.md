@@ -1,6 +1,6 @@
-# VendaVoa 🚗
+# 🚗 VendaVoa - Sistema PWA para Revendedores de Carros
 
-Sistema Web completo para Revendedores de Carros - PWA otimizada para mobile e desktop
+Sistema completo de gestão para revendedoras de carros com interface moderna e responsiva.
 
 ## 🚀 Funcionalidades
 
