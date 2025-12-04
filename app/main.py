@@ -36,10 +36,10 @@ app.add_middleware(
 )
 
 # Incluir rotas da API
-app.include_router(auth.router)
-app.include_router(cars.router)
-app.include_router(clients.router)
-app.include_router(docs_api.router)
+app.include_router(auth.router, prefix="/api")
+app.include_router(cars.router, prefix="/api")
+app.include_router(clients.router, prefix="/api")
+app.include_router(docs_api.router, prefix="/api")
 
 # Servir arquivos estáticos
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")

@@ -109,7 +109,7 @@
                 try {
                     loading.show(e.target);
                     
-                    const response = await api.post('/auth/login', data);
+                    const response = await api.post('/api/auth/login', data);
                     api.setToken(response.access_token);
                     
                     alert.success('Login realizado com sucesso!');
@@ -149,7 +149,7 @@
                     validation.clearFieldErrors();
                     loading.show(e.target);
                     
-                    const response = await api.post('/auth/register', data);
+                    const response = await api.post('/api/auth/register', data);
                     api.setToken(response.access_token);
                     
                     alert.success('Conta criada com sucesso!');

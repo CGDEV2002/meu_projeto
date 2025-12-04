@@ -233,7 +233,7 @@
         async function loadCars() {
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch('/cars/', {
+                const response = await fetch('/api/cars/', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
@@ -326,7 +326,7 @@
                     status: 'available'
                 };
 
-                const carResponse = await fetch('/cars/', {
+                const carResponse = await fetch('/api/cars/', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -344,7 +344,7 @@
                     const photoFormData = new FormData();
                     photoFormData.append('file', photoFile);
                     
-                    const photoResponse = await fetch(`/cars/upload-photo/${car.id}`, {
+                    const photoResponse = await fetch(`/api/cars/upload-photo/${car.id}`, {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${token}` },
                         body: photoFormData
@@ -378,7 +378,7 @@
                 formData.append('file', photoFile);
                 
                 const token = localStorage.getItem('token');
-                const response = await fetch(`/cars/upload-photo/${carId}`, {
+                const response = await fetch(`/api/cars/upload-photo/${carId}`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: formData

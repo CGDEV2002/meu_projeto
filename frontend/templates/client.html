@@ -153,11 +153,11 @@
         async function loadClientDetails() {
             try {
                 // Carregar dados do cliente
-                client = await api.get(`/clients/${clientId}`);
+                client = await api.get(`/api/clients/${clientId}`);
                 
                 // Se o cliente tem um carro associado, carregar dados do carro
                 if (client.car_id) {
-                    car = await api.get(`/cars/${client.car_id}`);
+                    car = await api.get(`/api/cars/${client.car_id}`);
                 }
 
                 renderClientDetails();
@@ -372,7 +372,7 @@
             try {
                 loading.show(e.target);
                 
-                const updatedClient = await api.put(`/clients/${clientId}`, data);
+                const updatedClient = await api.put(`/api/clients/${clientId}`, data);
                 client = updatedClient;
                 
                 alert.success('Cliente atualizado com sucesso!');

@@ -3,7 +3,7 @@ API de Documentos
 """
 from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 
@@ -163,11 +163,11 @@ async def upload_document_file(
 @router.post("/create-with-file/{car_id}")
 async def create_document_with_file(
     car_id: int,
-    name: str,
-    document_type: str,
+    name: str = Form(...),
+    document_type: str = Form(...),
     file: UploadFile = File(...),
-    notes: str = "",
-    is_required: bool = False,
+    notes: str = Form(""),
+    is_required: str = Form("false"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -194,7 +194,7 @@ async def create_document_with_file(
             document_type=document_type,
             file_url=file_url,
             notes=notes,
-            is_required=is_required,
+            is_required=is_required.lower() == 'true',
             is_completed=True,
             car_id=car_id
         )

@@ -149,7 +149,7 @@
         async function loadCars() {
             try {
                 loading.show('#cars-grid');
-                cars = await api.get('/cars/');
+                cars = await api.get('/api/cars/');
                 filteredCars = [...cars];
                 renderCars();
             } catch (error) {
@@ -246,7 +246,7 @@
             if (!confirm('Tem certeza que deseja excluir este carro?')) return;
             
             try {
-                await api.delete(`/cars/${carId}`);
+                await api.delete(`/api/cars/${carId}`);
                 alert.success('Carro excluído com sucesso!');
                 loadCars();
             } catch (error) {
@@ -318,11 +318,11 @@
                 let savedCar;
                 if (carId) {
                     // Editar carro
-                    savedCar = await api.put(`/cars/${carId}`, data);
+                    savedCar = await api.put(`/api/cars/${carId}`, data);
                     alert.success('Carro atualizado com sucesso!');
                 } else {
                     // Criar novo carro
-                    savedCar = await api.post('/cars/', data);
+                    savedCar = await api.post('/api/cars/', data);
                     alert.success('Carro adicionado com sucesso!');
                 }
                 
@@ -357,7 +357,7 @@
                 const formData = new FormData();
                 formData.append('file', file);
                 
-                const response = await fetch(`/cars/upload-photo/${carId}`, {
+                const response = await fetch(`/api/cars/upload-photo/${carId}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`

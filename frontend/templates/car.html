@@ -223,9 +223,9 @@
             try {
                 // Carregar dados em paralelo
                 const [carData, clientsData, documentsData] = await Promise.all([
-                    api.get(`/cars/${carId}`),
-                    api.get(`/clients/?car_id=${carId}`),
-                    api.get(`/docs/?car_id=${carId}`)
+                    api.get(`/api/cars/${carId}`),
+                    api.get(`/api/clients/?car_id=${carId}`),
+                    api.get(`/api/docs/?car_id=${carId}`)
                 ]);
 
                 car = carData;
@@ -388,7 +388,7 @@
             if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
             
             try {
-                await api.delete(`/clients/${clientId}`);
+                await api.delete(`/api/clients/${clientId}`);
                 alert.success('Cliente excluído com sucesso!');
                 clients = clients.filter(c => c.id !== clientId);
                 renderClients();
@@ -401,7 +401,7 @@
             if (!confirm('Tem certeza que deseja excluir este documento?')) return;
             
             try {
-                await api.delete(`/docs/${documentId}`);
+                await api.delete(`/api/docs/${documentId}`);
                 alert.success('Documento excluído com sucesso!');
                 documents = documents.filter(d => d.id !== documentId);
                 renderDocuments();
@@ -426,10 +426,10 @@
                 
                 let savedClient;
                 if (clientId) {
-                    savedClient = await api.put(`/clients/${clientId}`, data);
+                    savedClient = await api.put(`/api/clients/${clientId}`, data);
                     alert.success('Cliente atualizado com sucesso!');
                 } else {
-                    savedClient = await api.post('/clients/', data);
+                    savedClient = await api.post('/api/clients/', data);
                     alert.success('Cliente adicionado com sucesso!');
                 }
                 
@@ -509,7 +509,7 @@
                 let savedDocument;
                 if (documentId) {
                     // Editando documento existente
-                    savedDocument = await api.put(`/docs/${documentId}`, data);
+                    savedDocument = await api.put(`/api/docs/${documentId}`, data);
                     alert.success('Documento atualizado com sucesso!');
                     
                     // Se há arquivo para upload, fazer upload separado
@@ -537,9 +537,9 @@
                         const uploadFormData = new FormData();
                         uploadFormData.append('file', fileInput.files[0]);
                         uploadFormData.append('name', data.name);
-                        uploadFormData.append('description', data.description || '');
-                        uploadFormData.append('is_required', data.is_required);
-                        uploadFormData.append('is_completed', data.is_completed);
+                        uploadFormData.append('document_type', data.document_type || 'Outro');
+                        uploadFormData.append('notes', data.notes || '');
+                        uploadFormData.append('is_required', data.is_required ? 'true' : 'false');
                         
                         const response = await fetch(`/api/docs/create-with-file/${carId}`, {
                             method: 'POST',
@@ -552,11 +552,13 @@
                         if (response.ok) {
                             savedDocument = await response.json();
                         } else {
+                            const errorText = await response.text();
+                            console.error('Erro no upload:', errorText);
                             throw new Error('Erro no upload do arquivo');
                         }
                     } else {
                         // Criar documento sem arquivo
-                        savedDocument = await api.post('/docs/', data);
+                        savedDocument = await api.post('/api/docs/', data);
                     }
                     alert.success('Documento adicionado com sucesso!');
                 }
@@ -575,6 +577,7 @@
                 document.getElementById('document-modal-title').textContent = 'Adicionar Documento';
                 
             } catch (error) {
+                console.error('Erro completo:', error);
                 alert.error(error.message || 'Erro ao salvar documento');
             } finally {
                 loading.hide();
