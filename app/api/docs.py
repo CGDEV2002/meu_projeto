@@ -3,7 +3,7 @@ API de Documentos
 """
 from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 
@@ -12,6 +12,7 @@ from app.models.document import Document
 from app.models.car import Car
 from app.models.user import User
 from app.api.auth import get_current_user
+from app.utils.upload import save_uploaded_file, delete_file
 
 router = APIRouter(prefix="/docs", tags=["Documents"])
 
@@ -113,6 +114,102 @@ async def create_document(
     db.refresh(db_document)
     
     return db_document
+
+@router.post("/upload/{document_id}")
+async def upload_document_file(
+    document_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload de arquivo para um documento"""
+    # Verificar se o documento pertence ao tenant do usuário
+    document = db.query(Document).join(Car).filter(
+        Document.id == document_id,
+        Car.tenant_id == current_user.tenant_id
+    ).first()
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document not found"
+        )
+    
+    try:
+        # Remover arquivo antigo se existir
+        if document.file_url:
+            delete_file(document.file_url)
+        
+        # Salvar novo arquivo
+        file_url = await save_uploaded_file(file, "documents")
+        
+        # Atualizar documento
+        document.file_url = file_url
+        document.is_completed = True
+        db.commit()
+        
+        return {
+            "message": "File uploaded successfully",
+            "file_url": file_url,
+            "document_id": document_id
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+@router.post("/create-with-file/{car_id}")
+async def create_document_with_file(
+    car_id: int,
+    name: str,
+    document_type: str,
+    file: UploadFile = File(...),
+    notes: str = "",
+    is_required: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Criar documento e fazer upload do arquivo em uma só operação"""
+    # Verificar se o carro pertence ao tenant do usuário
+    car = db.query(Car).filter(
+        Car.id == car_id,
+        Car.tenant_id == current_user.tenant_id
+    ).first()
+    
+    if not car:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Car not found"
+        )
+    
+    try:
+        # Salvar arquivo
+        file_url = await save_uploaded_file(file, "documents")
+        
+        # Criar documento
+        db_document = Document(
+            name=name,
+            document_type=document_type,
+            file_url=file_url,
+            notes=notes,
+            is_required=is_required,
+            is_completed=True,
+            car_id=car_id
+        )
+        
+        db.add(db_document)
+        db.commit()
+        db.refresh(db_document)
+        
+        return db_document
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 @router.put("/{document_id}", response_model=DocumentResponse)
 async def update_document(

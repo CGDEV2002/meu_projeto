@@ -43,6 +43,7 @@ app.include_router(docs_api.router)
 
 # Servir arquivos estáticos
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Rotas para as páginas
 @app.get("/")
@@ -64,6 +65,10 @@ async def car_page(car_id: int):
 @app.get("/client/{client_id}")
 async def client_page(client_id: int):
     return FileResponse(str(FRONTEND_DIR / "templates" / "client.html"))
+
+@app.get("/upload")
+async def upload_page():
+    return FileResponse(str(FRONTEND_DIR / "templates" / "upload.html"))
 
 # Health check
 @app.get("/health")

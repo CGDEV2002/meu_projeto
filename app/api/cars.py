@@ -3,7 +3,7 @@ API de Carros
 """
 from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, ConfigDict
 
@@ -11,6 +11,7 @@ from app.db import get_db
 from app.models.car import Car
 from app.models.user import User
 from app.api.auth import get_current_user
+from app.utils.upload import save_uploaded_file, delete_file
 
 router = APIRouter(prefix="/cars", tags=["Cars"])
 
@@ -104,6 +105,50 @@ async def create_car(
     db.refresh(db_car)
     
     return db_car
+
+@router.post("/upload-photo/{car_id}")
+async def upload_car_photo(
+    car_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload de foto para um carro"""
+    # Verificar se o carro pertence ao tenant do usuário
+    car = db.query(Car).filter(
+        Car.id == car_id,
+        Car.tenant_id == current_user.tenant_id
+    ).first()
+    
+    if not car:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Car not found"
+        )
+    
+    try:
+        # Remover foto antiga se existir
+        if car.photo_url:
+            delete_file(car.photo_url)
+        
+        # Salvar nova foto
+        photo_url = await save_uploaded_file(file, "images")
+        
+        # Atualizar carro
+        car.photo_url = photo_url
+        db.commit()
+        
+        return {
+            "message": "Photo uploaded successfully",
+            "photo_url": photo_url,
+            "car_id": car_id
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 @router.put("/{car_id}", response_model=CarResponse)
 async def update_car(

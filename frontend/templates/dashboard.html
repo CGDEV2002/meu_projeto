@@ -104,8 +104,19 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">URL da Foto</label>
-                    <input type="url" name="photo_url" class="form-input">
+                    <label class="form-label">Foto do Carro</label>
+                    <div id="car-photo-upload" style="border: 2px dashed #2563eb; padding: 20px; text-align: center; background: #f8fafc; cursor: pointer; border-radius: 5px; margin-bottom: 10px;">
+                        <input type="file" id="car-photo-file" accept="image/*" style="display: none;">
+                        <p>📷 Clique ou arraste uma foto aqui</p>
+                        <p><small>Formatos: JPG, PNG, GIF, WebP (máx. 10MB)</small></p>
+                    </div>
+                    <img id="car-photo-preview" style="display: none; max-width: 200px; max-height: 200px; border-radius: 5px; margin-top: 10px;">
+                    <div id="upload-progress" style="display: none; margin-top: 10px;">
+                        <div style="background: #e2e8f0; border-radius: 10px; height: 8px; overflow: hidden;">
+                            <div id="progress-bar" style="background: #2563eb; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <small id="upload-status" style="color: #666; margin-top: 5px; display: block;"></small>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Status</label>
@@ -224,7 +235,7 @@
             document.querySelector('[name="model"]').value = car.model;
             document.querySelector('[name="year"]').value = car.year;
             document.querySelector('[name="price"]').value = car.price || '';
-            document.querySelector('[name="photo_url"]').value = car.photo_url || '';
+            // Não precisa preencher campo de foto pois agora é upload
             document.querySelector('[name="status"]').value = car.status;
             document.querySelector('[name="observations"]').value = car.observations || '';
             
@@ -243,38 +254,87 @@
             }
         }
 
+        // Configurar upload de foto
+        const carPhotoUpload = document.getElementById('car-photo-upload');
+        const carPhotoFile = document.getElementById('car-photo-file');
+        const carPhotoPreview = document.getElementById('car-photo-preview');
+        
+        carPhotoUpload.addEventListener('click', () => carPhotoFile.click());
+        
+        carPhotoUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            carPhotoUpload.style.backgroundColor = '#dbeafe';
+        });
+        
+        carPhotoUpload.addEventListener('dragleave', () => {
+            carPhotoUpload.style.backgroundColor = '#f8fafc';
+        });
+        
+        carPhotoUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            carPhotoUpload.style.backgroundColor = '#f8fafc';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                carPhotoFile.files = files;
+                showPhotoPreview(files[0]);
+            }
+        });
+        
+        carPhotoFile.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                showPhotoPreview(e.target.files[0]);
+            }
+        });
+        
+        function showPhotoPreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                carPhotoPreview.src = e.target.result;
+                carPhotoPreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+
         // Formulário de carro
         document.getElementById('car-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const formData = new FormData(e.target);
-            const data = Object.fromEntries(formData);
-            const carId = data.id;
+            const data = {};
             
-            // Remove campos vazios
-            Object.keys(data).forEach(key => {
-                if (data[key] === '' && key !== 'observations') {
-                    delete data[key];
+            // Coletar dados do formulário (exceto arquivo)
+            for (let [key, value] of formData.entries()) {
+                if (key !== 'photo' && value !== '') {
+                    data[key] = value;
                 }
-            });
+            }
             
+            const carId = data.id;
             delete data.id; // Remove ID dos dados
             
             try {
                 loading.show(e.target);
                 
+                let savedCar;
                 if (carId) {
-                    // Editar
-                    await api.put(`/cars/${carId}`, data);
+                    // Editar carro
+                    savedCar = await api.put(`/cars/${carId}`, data);
                     alert.success('Carro atualizado com sucesso!');
                 } else {
-                    // Criar
-                    await api.post('/cars/', data);
+                    // Criar novo carro
+                    savedCar = await api.post('/cars/', data);
                     alert.success('Carro adicionado com sucesso!');
+                }
+                
+                // Se há uma foto selecionada, fazer upload
+                const photoFile = carPhotoFile.files[0];
+                if (photoFile) {
+                    await uploadCarPhoto(savedCar.id || carId, photoFile);
                 }
                 
                 modal.hide('car-modal');
                 e.target.reset();
+                carPhotoPreview.style.display = 'none';
                 document.getElementById('car-modal-title').textContent = 'Adicionar Carro';
                 loadCars();
                 
@@ -284,12 +344,51 @@
                 loading.hide();
             }
         });
+        
+        async function uploadCarPhoto(carId, file) {
+            try {
+                const uploadProgress = document.getElementById('upload-progress');
+                const progressBar = document.getElementById('progress-bar');
+                const uploadStatus = document.getElementById('upload-status');
+                
+                uploadProgress.style.display = 'block';
+                uploadStatus.textContent = 'Fazendo upload da foto...';
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch(`/cars/upload-photo/${carId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Erro no upload da foto');
+                }
+                
+                progressBar.style.width = '100%';
+                uploadStatus.textContent = 'Foto enviada com sucesso!';
+                
+                setTimeout(() => {
+                    uploadProgress.style.display = 'none';
+                    progressBar.style.width = '0%';
+                }, 2000);
+                
+            } catch (error) {
+                alert.error('Erro no upload da foto: ' + error.message);
+            }
+        }
 
         // Reset form quando modal fechar
         document.addEventListener('click', function(e) {
             if (e.target.classList.contains('modal')) {
                 document.getElementById('car-form').reset();
                 document.getElementById('car-modal-title').textContent = 'Adicionar Carro';
+                carPhotoPreview.style.display = 'none';
+                document.getElementById('upload-progress').style.display = 'none';
             }
         });
 
