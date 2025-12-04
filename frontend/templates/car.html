@@ -376,10 +376,20 @@
             document.getElementById('document-id').value = doc.id;
             document.querySelector('#document-form [name="name"]').value = doc.name;
             document.querySelector('#document-form [name="document_type"]').value = doc.document_type;
-            document.querySelector('#document-form [name="file_url"]').value = doc.file_url || '';
             document.querySelector('#document-form [name="is_required"]').checked = doc.is_required;
             document.querySelector('#document-form [name="is_completed"]').checked = doc.is_completed;
             document.querySelector('#document-form [name="notes"]').value = doc.notes || '';
+            
+            // Reset do upload area
+            const docFileUpload = document.getElementById('doc-file-upload');
+            if (docFileUpload) {
+                const p = docFileUpload.querySelector('p');
+                if (doc.file_url) {
+                    p.innerHTML = `📄 Arquivo atual: ${doc.file_url.split('/').pop()}<br><small>Clique para alterar ou arraste novo arquivo</small>`;
+                } else {
+                    p.innerHTML = '📁 Clique aqui ou arraste um arquivo<br><small>Formatos aceitos: PDF, DOC, DOCX, PNG, JPG (máx. 10MB)</small>';
+                }
+            }
             
             modal.show('document-modal');
         }
@@ -574,6 +584,7 @@
                 renderDocuments();
                 modal.hide('document-modal');
                 e.target.reset();
+                document.getElementById('document-id').value = '';
                 document.getElementById('document-modal-title').textContent = 'Adicionar Documento';
                 
             } catch (error) {
@@ -591,6 +602,10 @@
                 document.getElementById('document-form').reset();
                 document.getElementById('client-modal-title').textContent = 'Adicionar Cliente';
                 document.getElementById('document-modal-title').textContent = 'Adicionar Documento';
+                
+                // Limpar IDs ocultos
+                document.getElementById('client-id').value = '';
+                document.getElementById('document-id').value = '';
                 
                 // Reset doc file upload label
                 const docFileUpload = document.getElementById('doc-file-upload');
