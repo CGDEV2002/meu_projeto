@@ -170,8 +170,18 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">URL do Arquivo</label>
-                    <input type="url" name="file_url" class="form-input">
+                    <label class="form-label">Arquivo do Documento</label>
+                    <div id="doc-file-upload" style="border: 2px dashed #2563eb; padding: 20px; text-align: center; background: #f8fafc; cursor: pointer; border-radius: 5px; margin-bottom: 10px;">
+                        <input type="file" id="doc-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt" style="display: none;">
+                        <p>📄 Clique ou arraste um arquivo aqui</p>
+                        <p><small>Formatos: PDF, DOC, DOCX, JPG, PNG, TXT (máx. 10MB)</small></p>
+                    </div>
+                    <div id="doc-upload-progress" style="display: none; margin-top: 10px;">
+                        <div style="background: #e2e8f0; border-radius: 10px; height: 8px; overflow: hidden;">
+                            <div id="doc-progress-bar" style="background: #2563eb; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <small id="doc-upload-status" style="color: #666; margin-top: 5px; display: block;"></small>
+                    </div>
                 </div>
                 <div style="display: flex; gap: 1rem;">
                     <div class="form-group" style="flex: 1;">
@@ -443,6 +453,42 @@
             }
         });
 
+        // Configurar upload de arquivo para documentos
+        const docFileUpload = document.getElementById('doc-file-upload');
+        const docFileInput = document.getElementById('doc-file-input');
+        
+        docFileUpload.addEventListener('click', () => docFileInput.click());
+        
+        docFileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            docFileUpload.style.backgroundColor = '#dbeafe';
+        });
+        
+        docFileUpload.addEventListener('dragleave', () => {
+            docFileUpload.style.backgroundColor = '#f8fafc';
+        });
+        
+        docFileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            docFileUpload.style.backgroundColor = '#f8fafc';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                docFileInput.files = files;
+                updateDocFileLabel(files[0].name);
+            }
+        });
+        
+        docFileInput.addEventListener('change', (e) => {
+            if (e.target.files[0]) {
+                updateDocFileLabel(e.target.files[0].name);
+            }
+        });
+        
+        function updateDocFileLabel(fileName) {
+            const p = docFileUpload.querySelector('p');
+            p.innerHTML = `📄 ${fileName} <br><small>Arquivo selecionado - clique para alterar</small>`;
+        }
+
         // Formulário de documento
         document.getElementById('document-form').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -450,6 +496,7 @@
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
             const documentId = data.id;
+            const fileInput = document.getElementById('doc-file-input');
             
             data.car_id = parseInt(carId);
             data.is_required = data.is_required === 'on';
@@ -461,10 +508,56 @@
                 
                 let savedDocument;
                 if (documentId) {
+                    // Editando documento existente
                     savedDocument = await api.put(`/docs/${documentId}`, data);
                     alert.success('Documento atualizado com sucesso!');
+                    
+                    // Se há arquivo para upload, fazer upload separado
+                    if (fileInput.files[0]) {
+                        const uploadFormData = new FormData();
+                        uploadFormData.append('file', fileInput.files[0]);
+                        
+                        const uploadResponse = await fetch(`/api/docs/upload/${documentId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: uploadFormData
+                        });
+                        
+                        if (uploadResponse.ok) {
+                            const uploadResult = await uploadResponse.json();
+                            savedDocument.file_url = uploadResult.file_url;
+                        }
+                    }
                 } else {
-                    savedDocument = await api.post('/docs/', data);
+                    // Criando novo documento
+                    if (fileInput.files[0]) {
+                        // Criar documento com arquivo
+                        const uploadFormData = new FormData();
+                        uploadFormData.append('file', fileInput.files[0]);
+                        uploadFormData.append('name', data.name);
+                        uploadFormData.append('description', data.description || '');
+                        uploadFormData.append('is_required', data.is_required);
+                        uploadFormData.append('is_completed', data.is_completed);
+                        
+                        const response = await fetch(`/api/docs/create-with-file/${carId}`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: uploadFormData
+                        });
+                        
+                        if (response.ok) {
+                            savedDocument = await response.json();
+                        } else {
+                            throw new Error('Erro no upload do arquivo');
+                        }
+                    } else {
+                        // Criar documento sem arquivo
+                        savedDocument = await api.post('/docs/', data);
+                    }
                     alert.success('Documento adicionado com sucesso!');
                 }
                 
@@ -495,6 +588,13 @@
                 document.getElementById('document-form').reset();
                 document.getElementById('client-modal-title').textContent = 'Adicionar Cliente';
                 document.getElementById('document-modal-title').textContent = 'Adicionar Documento';
+                
+                // Reset doc file upload label
+                const docFileUpload = document.getElementById('doc-file-upload');
+                if (docFileUpload) {
+                    const p = docFileUpload.querySelector('p');
+                    p.innerHTML = '📁 Clique aqui ou arraste um arquivo<br><small>Formatos aceitos: PDF, DOC, DOCX, PNG, JPG (máx. 10MB)</small>';
+                }
             }
         });
     </script>
