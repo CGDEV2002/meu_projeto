@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VendaVoa - Detalhes do Cliente</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="logo">🚗 VendaVoa</div>
+                <ul class="nav-links">
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="#" id="logout-btn">Sair</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" style="margin-top: 2rem;">
+        <button class="btn btn-secondary" onclick="history.back()" style="margin-bottom: 1rem;">
+            ← Voltar
+        </button>
+
+        <div id="client-details" style="display: none;">
+            <!-- Informações do cliente -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <h1 id="client-name"></h1>
+                </div>
+                <div class="card-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        <div>
+                            <div style="display: grid; gap: 1rem;">
+                                <div>
+                                    <strong>Telefone:</strong> <span id="client-phone"></span>
+                                </div>
+                                <div id="client-cpf-container">
+                                    <strong>CPF:</strong> <span id="client-cpf"></span>
+                                </div>
+                                <div id="client-email-container">
+                                    <strong>Email:</strong> <span id="client-email"></span>
+                                </div>
+                                <div>
+                                    <strong>Status da Negociação:</strong> <span id="client-status"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div id="client-notes-container">
+                                <strong>Anotações:</strong>
+                                <p id="client-notes" style="margin-top: 0.5rem; color: #666; background: #f9fafb; padding: 1rem; border-radius: 6px;"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-primary" onclick="editClient()">Editar Cliente</button>
+                    <a id="whatsapp-link" href="#" target="_blank" class="whatsapp-btn">
+                        💬 Abrir WhatsApp
+                    </a>
+                </div>
+            </div>
+
+            <!-- Carro de interesse -->
+            <div id="car-section" class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <h2>Carro de Interesse</h2>
+                </div>
+                <div class="card-body">
+                    <div id="car-info">
+                        <!-- Informações do carro serão carregadas aqui -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline da negociação -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Histórico da Negociação</h2>
+                </div>
+                <div class="card-body">
+                    <div id="negotiation-timeline">
+                        <!-- Timeline será renderizada aqui -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading-container" class="loading">
+            <div class="spinner"></div>
+        </div>
+    </main>
+
+    <!-- Modal de Editar Cliente -->
+    <div id="client-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Editar Cliente</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="client-form">
+                <div class="form-group">
+                    <label class="form-label">Nome</label>
+                    <input type="text" name="name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefone</label>
+                    <input type="tel" name="phone" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">CPF (opcional)</label>
+                    <input type="text" name="cpf" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email (opcional)</label>
+                    <input type="email" name="email" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status da Negociação</label>
+                    <select name="negotiation_status" class="form-select" required>
+                        <option value="interested">Interessado</option>
+                        <option value="negotiating">Negociando</option>
+                        <option value="closed">Fechado</option>
+                        <option value="lost">Perdido</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Anotações</label>
+                    <textarea name="notes" class="form-textarea" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Salvar Alterações
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        let client = null;
+        let car = null;
+        const clientId = window.location.pathname.split('/')[2];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadClientDetails();
+        });
+
+        async function loadClientDetails() {
+            try {
+                // Carregar dados do cliente
+                client = await api.get(`/clients/${clientId}`);
+                
+                // Se o cliente tem um carro associado, carregar dados do carro
+                if (client.car_id) {
+                    car = await api.get(`/cars/${client.car_id}`);
+                }
+
+                renderClientDetails();
+                renderCarInfo();
+                renderNegotiationTimeline();
+
+            } catch (error) {
+                alert.error('Erro ao carregar dados: ' + error.message);
+                setTimeout(() => history.back(), 2000);
+            } finally {
+                document.getElementById('loading-container').style.display = 'none';
+                document.getElementById('client-details').style.display = 'block';
+            }
+        }
+
+        function renderClientDetails() {
+            document.getElementById('client-name').textContent = client.name;
+            document.getElementById('client-phone').textContent = utils.formatPhone(client.phone);
+            
+            // CPF
+            const cpfContainer = document.getElementById('client-cpf-container');
+            if (client.cpf && client.cpf.trim()) {
+                document.getElementById('client-cpf').textContent = client.cpf;
+                cpfContainer.style.display = 'block';
+            } else {
+                cpfContainer.style.display = 'none';
+            }
+
+            // Email
+            const emailContainer = document.getElementById('client-email-container');
+            if (client.email && client.email.trim()) {
+                document.getElementById('client-email').innerHTML = `<a href="mailto:${client.email}" style="color: #2563eb;">${client.email}</a>`;
+                emailContainer.style.display = 'block';
+            } else {
+                emailContainer.style.display = 'none';
+            }
+
+            // Status
+            const status = utils.getNegotiationStatusBadge(client.negotiation_status);
+            document.getElementById('client-status').innerHTML = `<span class="car-status ${status.class}">${status.text}</span>`;
+
+            // Anotações
+            const notesContainer = document.getElementById('client-notes-container');
+            if (client.notes && client.notes.trim()) {
+                document.getElementById('client-notes').textContent = client.notes;
+                notesContainer.style.display = 'block';
+            } else {
+                notesContainer.style.display = 'none';
+            }
+
+            // WhatsApp link
+            const whatsappMessage = car 
+                ? `Olá ${client.name}! Sobre o ${car.title} (${car.brand} ${car.model} ${car.year})...`
+                : `Olá ${client.name}! Como posso ajudá-lo?`;
+            
+            document.getElementById('whatsapp-link').href = utils.getWhatsAppLink(client.phone, whatsappMessage);
+
+            document.title = `VendaVoa - ${client.name}`;
+        }
+
+        function renderCarInfo() {
+            const container = document.getElementById('car-info');
+            
+            if (!car) {
+                container.innerHTML = '<p style="color: #666;">Nenhum carro específico associado a este cliente.</p>';
+                return;
+            }
+
+            const status = utils.getStatusBadge(car.status);
+            const imageHTML = car.photo_url 
+                ? `<img src="${car.photo_url}" alt="${car.title}" style="width: 150px; height: 100px; object-fit: cover; border-radius: 6px;" onerror="this.style.display='none'">` 
+                : '';
+            
+            container.innerHTML = `
+                <div style="display: flex; gap: 1rem; align-items: flex-start;">
+                    ${imageHTML}
+                    <div style="flex: 1;">
+                        <h3 style="margin: 0 0 0.5rem 0;">
+                            <a href="/car/${car.id}" style="color: #2563eb; text-decoration: none;">${car.title}</a>
+                        </h3>
+                        <div style="color: #666; margin-bottom: 0.5rem;">
+                            ${car.brand} ${car.model} • ${car.year}
+                        </div>
+                        <div style="font-size: 1.1rem; font-weight: bold; color: #059669; margin-bottom: 0.5rem;">
+                            ${utils.formatCurrency(car.price)}
+                        </div>
+                        <span class="car-status ${status.class}">${status.text}</span>
+                        ${car.observations ? `<p style="margin: 0.5rem 0 0 0; color: #666; font-size: 0.9rem;">${car.observations}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderNegotiationTimeline() {
+            const container = document.getElementById('negotiation-timeline');
+            
+            // Criar timeline baseado no status atual e data de criação
+            const timeline = [
+                {
+                    date: client.created_at,
+                    status: 'Cliente demonstrou interesse',
+                    description: 'Primeiro contato registrado no sistema',
+                    active: true
+                }
+            ];
+
+            // Adicionar marcos baseados no status atual
+            if (client.negotiation_status === 'negotiating' || client.negotiation_status === 'closed') {
+                timeline.push({
+                    date: client.updated_at || client.created_at,
+                    status: 'Negociação iniciada',
+                    description: 'Cliente entrou em negociação ativa',
+                    active: true
+                });
+            }
+
+            if (client.negotiation_status === 'closed') {
+                timeline.push({
+                    date: client.updated_at || client.created_at,
+                    status: 'Negociação fechada',
+                    description: 'Venda concluída com sucesso',
+                    active: true
+                });
+            }
+
+            if (client.negotiation_status === 'lost') {
+                timeline.push({
+                    date: client.updated_at || client.created_at,
+                    status: 'Negociação perdida',
+                    description: 'Cliente desistiu ou não fechou negócio',
+                    active: true
+                });
+            }
+
+            // Sugestões de próximos passos
+            const nextSteps = getNextSteps(client.negotiation_status);
+            if (nextSteps.length > 0) {
+                timeline.push(...nextSteps);
+            }
+
+            container.innerHTML = timeline.map((item, index) => `
+                <div style="display: flex; gap: 1rem; padding: 1rem 0; border-bottom: ${index < timeline.length - 1 ? '1px solid #e5e7eb' : 'none'};">
+                    <div style="width: 12px; height: 12px; border-radius: 50%; background: ${item.active ? '#2563eb' : '#d1d5db'}; margin-top: 0.5rem; flex-shrink: 0;"></div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 500; color: ${item.active ? '#333' : '#666'};">
+                            ${item.status}
+                        </div>
+                        <div style="color: #666; font-size: 0.9rem; margin: 0.25rem 0;">
+                            ${item.description}
+                        </div>
+                        ${item.date ? `<div style="color: #9ca3af; font-size: 0.8rem;">${utils.formatDate(item.date)}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getNextSteps(currentStatus) {
+            const suggestions = {
+                interested: [
+                    {
+                        status: 'Próximo: Entrar em contato',
+                        description: 'Ligue ou mande mensagem para o cliente',
+                        active: false
+                    },
+                    {
+                        status: 'Agendar visita',
+                        description: 'Marque um horário para mostrar o veículo',
+                        active: false
+                    }
+                ],
+                negotiating: [
+                    {
+                        status: 'Próximo: Finalizar proposta',
+                        description: 'Definir valor final e condições de pagamento',
+                        active: false
+                    },
+                    {
+                        status: 'Preparar documentação',
+                        description: 'Separar todos os documentos necessários',
+                        active: false
+                    }
+                ],
+                closed: [],
+                lost: []
+            };
+
+            return suggestions[currentStatus] || [];
+        }
+
+        function editClient() {
+            // Preencher formulário com dados atuais
+            document.querySelector('[name="name"]').value = client.name;
+            document.querySelector('[name="phone"]').value = client.phone;
+            document.querySelector('[name="cpf"]').value = client.cpf || '';
+            document.querySelector('[name="email"]').value = client.email || '';
+            document.querySelector('[name="negotiation_status"]').value = client.negotiation_status;
+            document.querySelector('[name="notes"]').value = client.notes || '';
+            
+            modal.show('client-modal');
+        }
+
+        // Formulário de editar cliente
+        document.getElementById('client-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            // Manter o carro associado
+            data.car_id = client.car_id;
+            
+            try {
+                loading.show(e.target);
+                
+                const updatedClient = await api.put(`/clients/${clientId}`, data);
+                client = updatedClient;
+                
+                alert.success('Cliente atualizado com sucesso!');
+                
+                renderClientDetails();
+                renderNegotiationTimeline();
+                modal.hide('client-modal');
+                
+            } catch (error) {
+                alert.error(error.message || 'Erro ao atualizar cliente');
+            } finally {
+                loading.hide();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VendaVoa - Dashboard</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="VendaVoa">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <nav class="nav">
+                <div class="logo">🚗 VendaVoa</div>
+                <ul class="nav-links">
+                    <li><a href="/dashboard">Dashboard</a></li>
+                    <li><a href="#" id="logout-btn">Sair</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container" style="margin-top: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1>Meus Carros</h1>
+            <button class="btn btn-primary" onclick="modal.show('car-modal')">
+                Adicionar Carro
+            </button>
+        </div>
+
+        <!-- Filtros -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <div class="card-body">
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;">
+                    <div>
+                        <label class="form-label">Status:</label>
+                        <select id="status-filter" class="form-select" style="width: auto;">
+                            <option value="">Todos</option>
+                            <option value="available">Disponível</option>
+                            <option value="reserved">Reservado</option>
+                            <option value="sold">Vendido</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Buscar:</label>
+                        <input type="text" id="search-input" class="form-input" placeholder="Marca, modelo ou título..." style="width: 200px;">
+                    </div>
+                    <button class="btn btn-secondary" onclick="applyFilters()">Filtrar</button>
+                    <button class="btn btn-secondary" onclick="clearFilters()">Limpar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid de carros -->
+        <div id="cars-grid" class="cars-grid">
+            <!-- Carros serão carregados aqui -->
+        </div>
+
+        <div id="empty-state" style="text-align: center; padding: 3rem; display: none;">
+            <p style="font-size: 1.2rem; color: #666; margin-bottom: 1rem;">
+                Nenhum carro encontrado
+            </p>
+            <button class="btn btn-primary" onclick="modal.show('car-modal')">
+                Adicionar Primeiro Carro
+            </button>
+        </div>
+    </main>
+
+    <!-- Modal de Adicionar/Editar Carro -->
+    <div id="car-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="car-modal-title">Adicionar Carro</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="car-form">
+                <input type="hidden" id="car-id" name="id">
+                <div class="form-group">
+                    <label class="form-label">Título</label>
+                    <input type="text" name="title" class="form-input" required>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Marca</label>
+                        <input type="text" name="brand" class="form-input" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Modelo</label>
+                        <input type="text" name="model" class="form-input" required>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Ano</label>
+                        <input type="number" name="year" class="form-input" min="1980" max="2030" required>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">Preço (R$)</label>
+                        <input type="number" name="price" class="form-input" step="0.01" min="0">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">URL da Foto</label>
+                    <input type="url" name="photo_url" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select" required>
+                        <option value="available">Disponível</option>
+                        <option value="reserved">Reservado</option>
+                        <option value="sold">Vendido</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Observações</label>
+                    <textarea name="observations" class="form-textarea" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Salvar
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        let cars = [];
+        let filteredCars = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCars();
+        });
+
+        async function loadCars() {
+            try {
+                loading.show('#cars-grid');
+                cars = await api.get('/cars/');
+                filteredCars = [...cars];
+                renderCars();
+            } catch (error) {
+                alert.error('Erro ao carregar carros: ' + error.message);
+            } finally {
+                loading.hide();
+            }
+        }
+
+        function renderCars() {
+            const grid = document.getElementById('cars-grid');
+            const emptyState = document.getElementById('empty-state');
+            
+            if (filteredCars.length === 0) {
+                grid.style.display = 'none';
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            grid.style.display = 'grid';
+            emptyState.style.display = 'none';
+            
+            grid.innerHTML = filteredCars.map(car => {
+                const status = utils.getStatusBadge(car.status);
+                const imageHTML = car.photo_url 
+                    ? `<img src="${car.photo_url}" alt="${car.title}" onerror="this.parentNode.innerHTML='📷 Sem foto'">` 
+                    : '📷 Sem foto';
+                
+                return `
+                    <div class="car-card card" onclick="window.location.href='/car/${car.id}'">
+                        <div class="car-image">${imageHTML}</div>
+                        <div class="car-info">
+                            <div class="car-title">${car.title}</div>
+                            <div class="car-details">${car.brand} ${car.model} • ${car.year}</div>
+                            <div class="car-price">${utils.formatCurrency(car.price)}</div>
+                            <span class="car-status ${status.class}">${status.text}</span>
+                        </div>
+                        <div class="card-footer">
+                            <button class="btn btn-secondary" onclick="event.stopPropagation(); editCar(${car.id})" style="flex: 1;">
+                                Editar
+                            </button>
+                            <button class="btn btn-danger" onclick="event.stopPropagation(); deleteCar(${car.id})" style="flex: 1;">
+                                Excluir
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('status-filter').value;
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            
+            filteredCars = cars.filter(car => {
+                const matchesStatus = !statusFilter || car.status === statusFilter;
+                const matchesSearch = !searchTerm || 
+                    car.title.toLowerCase().includes(searchTerm) ||
+                    car.brand.toLowerCase().includes(searchTerm) ||
+                    car.model.toLowerCase().includes(searchTerm);
+                
+                return matchesStatus && matchesSearch;
+            });
+            
+            renderCars();
+        }
+
+        function clearFilters() {
+            document.getElementById('status-filter').value = '';
+            document.getElementById('search-input').value = '';
+            filteredCars = [...cars];
+            renderCars();
+        }
+
+        function editCar(carId) {
+            const car = cars.find(c => c.id === carId);
+            if (!car) return;
+            
+            document.getElementById('car-modal-title').textContent = 'Editar Carro';
+            document.getElementById('car-id').value = car.id;
+            document.querySelector('[name="title"]').value = car.title;
+            document.querySelector('[name="brand"]').value = car.brand;
+            document.querySelector('[name="model"]').value = car.model;
+            document.querySelector('[name="year"]').value = car.year;
+            document.querySelector('[name="price"]').value = car.price || '';
+            document.querySelector('[name="photo_url"]').value = car.photo_url || '';
+            document.querySelector('[name="status"]').value = car.status;
+            document.querySelector('[name="observations"]').value = car.observations || '';
+            
+            modal.show('car-modal');
+        }
+
+        async function deleteCar(carId) {
+            if (!confirm('Tem certeza que deseja excluir este carro?')) return;
+            
+            try {
+                await api.delete(`/cars/${carId}`);
+                alert.success('Carro excluído com sucesso!');
+                loadCars();
+            } catch (error) {
+                alert.error('Erro ao excluir carro: ' + error.message);
+            }
+        }
+
+        // Formulário de carro
+        document.getElementById('car-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            const carId = data.id;
+            
+            // Remove campos vazios
+            Object.keys(data).forEach(key => {
+                if (data[key] === '' && key !== 'observations') {
+                    delete data[key];
+                }
+            });
+            
+            delete data.id; // Remove ID dos dados
+            
+            try {
+                loading.show(e.target);
+                
+                if (carId) {
+                    // Editar
+                    await api.put(`/cars/${carId}`, data);
+                    alert.success('Carro atualizado com sucesso!');
+                } else {
+                    // Criar
+                    await api.post('/cars/', data);
+                    alert.success('Carro adicionado com sucesso!');
+                }
+                
+                modal.hide('car-modal');
+                e.target.reset();
+                document.getElementById('car-modal-title').textContent = 'Adicionar Carro';
+                loadCars();
+                
+            } catch (error) {
+                alert.error(error.message || 'Erro ao salvar carro');
+            } finally {
+                loading.hide();
+            }
+        });
+
+        // Reset form quando modal fechar
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal')) {
+                document.getElementById('car-form').reset();
+                document.getElementById('car-modal-title').textContent = 'Adicionar Carro';
+            }
+        });
+
+        // Filtros em tempo real
+        document.getElementById('search-input').addEventListener('input', applyFilters);
+        document.getElementById('status-filter').addEventListener('change', applyFilters);
+    </script>
+</body>
+</html>

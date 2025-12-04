@@ -1,0 +1,38 @@
+{
+    "name": "VendaVoa",
+    "short_name": "VendaVoa",
+    "description": "Sistema para revendedores de carros",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#2563eb",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/static/img/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/static/img/icon-512x512.png", 
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/static/img/icon-maskable-192x192.png",
+            "sizes": "192x192", 
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/static/img/icon-maskable-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png", 
+            "purpose": "maskable"
+        }
+    ],
+    "categories": ["business", "productivity"],
+    "lang": "pt-BR"
+}

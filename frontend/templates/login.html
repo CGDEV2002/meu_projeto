@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VendaVoa - Login</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="VendaVoa">
+</head>
+<body>
+    <div class="container" style="max-width: 400px; margin-top: 10vh;">
+        <div class="card">
+            <div class="card-body" style="text-align: center;">
+                <div class="logo" style="font-size: 2rem; margin-bottom: 2rem;">
+                    🚗 VendaVoa
+                </div>
+                <h2 style="margin-bottom: 2rem;">Login</h2>
+                
+                <form id="login-form">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Senha</label>
+                        <input type="password" name="password" class="form-input" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">
+                        Entrar
+                    </button>
+                </form>
+                
+                <p>
+                    Não tem uma conta? 
+                    <a href="#" id="show-register" style="color: #2563eb;">Cadastre-se</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Registro -->
+    <div id="register-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Criar Conta</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="register-form">
+                <div class="form-group">
+                    <label class="form-label">Nome Completo</label>
+                    <input type="text" name="full_name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Senha</label>
+                    <input type="password" name="password" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nome da Loja</label>
+                    <input type="text" name="tenant_name" class="form-input" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Criar Conta
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Registrar Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/static/service-worker.js')
+                    .then(registration => {
+                        console.log('Service Worker registrado:', registration);
+                    })
+                    .catch(error => {
+                        console.log('Erro ao registrar Service Worker:', error);
+                    });
+            }
+
+            // Redirecionar se já estiver logado
+            if (api.token) {
+                window.location.href = '/dashboard';
+                return;
+            }
+
+            // Mostrar modal de registro
+            document.getElementById('show-register').addEventListener('click', function(e) {
+                e.preventDefault();
+                modal.show('register-modal');
+            });
+
+            // Login
+            document.getElementById('login-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData);
+                
+                try {
+                    loading.show(e.target);
+                    
+                    const response = await api.post('/auth/login', data);
+                    api.setToken(response.access_token);
+                    
+                    alert.success('Login realizado com sucesso!');
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                    
+                } catch (error) {
+                    alert.error(error.message || 'Erro ao fazer login');
+                } finally {
+                    loading.hide();
+                }
+            });
+
+            // Registro
+            document.getElementById('register-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const data = Object.fromEntries(formData);
+                
+                // Validação básica
+                const errors = validation.validateForm(data, {
+                    full_name: ['required'],
+                    email: ['required', 'email'],
+                    password: [(value) => value.length >= 6 || 'Senha deve ter pelo menos 6 caracteres'],
+                    tenant_name: ['required']
+                });
+                
+                if (errors) {
+                    validation.showFieldErrors(errors);
+                    return;
+                }
+                
+                try {
+                    validation.clearFieldErrors();
+                    loading.show(e.target);
+                    
+                    const response = await api.post('/auth/register', data);
+                    api.setToken(response.access_token);
+                    
+                    alert.success('Conta criada com sucesso!');
+                    modal.hide('register-modal');
+                    
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1000);
+                    
+                } catch (error) {
+                    alert.error(error.message || 'Erro ao criar conta');
+                } finally {
+                    loading.hide();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

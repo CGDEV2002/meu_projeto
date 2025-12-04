@@ -1,0 +1,41 @@
+# Arquivos de sistema
+.env
+*.db
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# FastAPI
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Dependências
+node_modules/
+
+# Upload de arquivos
+uploads/
+temp/
+
+# Cache
+.cache/
